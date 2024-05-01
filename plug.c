@@ -21,7 +21,6 @@
 typedef struct {
   size_t i;
   float duration;
-  bool loop;
 } Animation;
 
 typedef struct {
@@ -46,12 +45,8 @@ void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
   assert(kfs_count > 0);
 
   if (a->i >= kfs_count) {
-    if (a->loop) {
-      a->i = 0;
-      a->duration = 0;
-    } else {
-      return;
-    }
+    a->i = 0;
+    a->duration = 0;
   }
 
   a->duration += dt;
@@ -63,6 +58,7 @@ void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
 }
 
 typedef struct {
+  size_t size;
   Animation a;
   Font font;
 } Plug;
@@ -85,12 +81,13 @@ void plug_init(void)
   p = malloc(sizeof(*p));
   assert(p != NULL);
   memset(p, 0, sizeof(*p));
-  p->a.loop = true;
+  p->size = sizeof(*p);
   load_resources();
 }
 
 void *plug_pre_reload(void)
 {
+  TraceLog(LOG_INFO, "Reloading plugin");
   unload_resources();
   return p;
 }
@@ -98,6 +95,15 @@ void *plug_pre_reload(void)
 void plug_post_reload(void *state)
 {
   p = state;
+  if (p->size < sizeof(*p)) {
+    TraceLog(LOG_INFO, "Migrating plugin state scheme %zu bytes -> %zu bytes", p->size, sizeof(*p));
+    p = realloc(p, sizeof(*p));
+    p->size = sizeof(*p);
+  } else if (p->size > sizeof(*p)) {
+    TraceLog(LOG_ERROR, "Cannot migrate the new plugin state schema because the size of the state became smaller");
+    abort();
+  }
+
   load_resources();
 }
 
