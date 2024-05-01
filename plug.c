@@ -113,20 +113,17 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
+static Keyframe kfs[] = {
+  {.from = 0, .to = 0, .duration = 0.5},
+  {.from = 0, .to = 1, .duration = 0.5},
+  {.from = 1, .to = 1, .duration = 0.5},
+  {.from = 1, .to = 2, .duration = 0.5},
+  {.from = 2, .to = 2, .duration = 0.5},
+  {.from = 2, .to = 3, .duration = 0.5},
+};
+
 void turing_machine_tape(Animation *a, float dt, float w, float h)
 {
-  float offset = 7.0;
-  Keyframe kfs[] = {
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    //{.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    //{.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-  };
-
   Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
 #if DARK_MODE
   Color cell_color = COLOR_TEXT;
@@ -143,8 +140,9 @@ void turing_machine_tape(Animation *a, float dt, float w, float h)
 
   ClearBackground(background_color);
   for (size_t i = 0; i < 200; ++i) {
+    size_t offset = 7;
     Rectangle rec = {
-      .x = i*(CELL_WIDTH + CELL_PAD) + t,
+      .x = i*(CELL_WIDTH + CELL_PAD) + w/2 - CELL_WIDTH/2 - (t + offset)*(CELL_WIDTH + CELL_PAD),
       .y = h/2 - CELL_HEIGHT/2,
       .width = CELL_WIDTH,
       .height = CELL_HEIGHT,
@@ -173,7 +171,7 @@ void plug_update(void)
 {
   BeginDrawing();
   if (p->ffmpeg != NULL) {
-    if (p->rendering_duration >= 3) {
+    if (p->rendering_duration >= keyframes_duration(kfs, ARRAY_LEN(kfs))) {
       ffmpeg_end_rendering(p->ffmpeg);
       memset(&p->a, 0, sizeof(p->a));
       p->ffmpeg = NULL;
@@ -194,7 +192,7 @@ void plug_update(void)
       UnloadImage(image);
     }
   } else {
-    if (IsKeyPressed(KEY_R)) {
+    if (IsKeyPressed(KEY_F)) {
       SetTraceLogLevel(LOG_WARNING);
       p->ffmpeg = ffmpeg_start_rendering(RENDER_WIDTH, RENDER_HEIGHT, RENDER_FPS);
       p->rendering_duration = 0.0;
