@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra
+CFLAGS=-Wall -Wextra -Wswitch-enum
 LIBS=-lraylib
 
 LIBPLUG_DEPS=ffmpeg.c

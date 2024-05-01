@@ -18,69 +18,67 @@
 #define CELL_HEIGHT 100
 #define CELL_PAD (CELL_WIDTH*0.15)
 
+#define TAPE_COUNT 20
+#define HEAD_ANIMATION_DURATION 0.5
+
+static inline float sinstep(float t)
+{
+  return (sinf(PI*t - PI*0.5) + 1)*0.5;
+}
+
 typedef struct {
-  size_t i;
-  float duration;
-} Animation;
+  const char *from;
+  const char *to;
+  float t;
+} Cell;
+
+typedef enum {
+  HS_MOVING,
+  HS_WRITING,
+  HS_HALT,
+} HeadState;
 
 typedef struct {
-  float from;
-  float to;
-  float duration;
-} Keyframe;
-
-float keyframes_duration(Keyframe *kfs, size_t kfs_count)
-{
-  float duration = 0.0;
-  for (size_t i = 0; i < kfs_count; ++i) {
-    duration += kfs[i].duration;
-  }
-  return duration;
-}
-
-float animation_value(Animation *a, Keyframe *kfs, size_t kfs_count)
-{
-  assert(kfs_count > 0);
-  Keyframe *kf = &kfs[a->i];
-  float t = a->duration/kf->duration;
-  t = (sinf(PI*t - PI*0.5) + 1)*0.5;
-  return Lerp(kf->from, kf->to, t);
-}
-
-void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
-{
-  assert(kfs_count > 0);
-
-  a->i = a->i%kfs_count;
-  a->duration += dt;
-
-  while (a->duration >= kfs[a->i].duration) {
-    a->duration -= kfs[a->i].duration;
-    a->i = (a->i + 1)%kfs_count;
-  }
-}
+  HeadState state;
+  size_t from, to;
+  float t;
+} Head;
 
 typedef struct {
   size_t size;
 
-  Animation a;
   FFMPEG *ffmpeg;
   RenderTexture2D screen;
   float rendering_duration;
+
+  Cell tape[TAPE_COUNT];
+  Head head;
 
   Font font;
 } Plug;
 
 static Plug *p = NULL;
 
-void load_resources()
+static void load_resources(void)
 {
   p->font = LoadFontEx("fonts/ttf/JetBrainsMono-Regular.ttf", FONT_SIZE, 0, 250);
 }
 
-void unload_resources()
+static void unload_resources(void)
 {
   UnloadFont(p->font);
+}
+
+static void reset_animation(void)
+{
+  for (size_t i = 0; i < TAPE_COUNT; ++i) {
+    p->tape[i].from = "69";
+    p->tape[i].to = "420";
+  }
+  p->head.state = HS_MOVING;
+  p->head.from = 7;
+  p->head.to = 8;
+  p->head.t = 0;
 }
 
 void plug_init(void)
@@ -91,6 +89,7 @@ void plug_init(void)
   memset(p, 0, sizeof(*p));
   p->size = sizeof(*p);
   p->screen = LoadRenderTexture(RENDER_WIDTH, RENDER_HEIGHT);
+  reset_animation();
   load_resources();
 }
 
@@ -113,22 +112,10 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
-static Keyframe kfs[] = {
-  {.from = 0, .to = 0, .duration = 0.5},
-  {.from = 0, .to = 1, .duration = 0.5},
-  {.from = 1, .to = 1, .duration = 0.5},
-  {.from = 1, .to = 2, .duration = 0.5},
-  {.from = 2, .to = 2, .duration = 0.5},
-  {.from = 2, .to = 3, .duration = 0.5},
-};
-#define kfs_count ARRAY_LEN(kfs)
-
-void turing_machine_tape(Animation *a, float dt, float w, float h)
+static void turing_machine(float dt, float w, float h)
 {
-  animation_update(a, dt, kfs, kfs_count);
-  float t = animation_value(a, kfs, kfs_count);
-
   Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
+
 #if DARK_MODE
   Color cell_color = COLOR_TEXT;
   Color head_color = COLOR_BLUE;
@@ -140,22 +127,68 @@ void turing_machine_tape(Animation *a, float dt, float w, float h)
 #endif
 
   ClearBackground(background_color);
-  for (size_t i = 0; i < 200; ++i) {
-    size_t offset = 7;
+
+  float t = 0.0;
+  switch (p->head.state) {
+    case HS_MOVING: {
+      p->head.t = (p->head.t*HEAD_ANIMATION_DURATION + dt)/HEAD_ANIMATION_DURATION;
+      if (p->head.t >= 1.0) {
+        p->head.from = p->head.to;
+        p->head.state = HS_WRITING;
+
+        p->tape[p->head.from].t = 0;
+      }
+      t = (float)p->head.from + ((float)p->head.to - (float)p->head.from)*sinstep(p->head.t);
+    } break;
+    case HS_WRITING: {
+      p->tape[p->head.from].t = (p->tape[p->head.from].t*HEAD_ANIMATION_DURATION + dt)/HEAD_ANIMATION_DURATION;
+      if (p->tape[p->head.from].t >= 1.0) {
+        if (p->head.from + 1 >= TAPE_COUNT) {
+          p->head.state = HS_HALT;
+        } else {
+          p->head.to = p->head.from + 1;
+          p->head.t = 0.0;
+          p->head.state = HS_MOVING;
+        }
+      }
+
+      t = (float)p->head.from;
+    } break;
+    case HS_HALT: {
+      t = (float)p->head.from;
+    } break;
+  }
+
+  for (size_t i = 0; i < TAPE_COUNT; ++i) {
     Rectangle rec = {
-      .x = i*(CELL_WIDTH + CELL_PAD) + w/2 - CELL_WIDTH/2 - (t + offset)*(CELL_WIDTH + CELL_PAD),
+      .x = i*(CELL_WIDTH + CELL_PAD) + w/2 - CELL_WIDTH/2 - t*(CELL_WIDTH + CELL_PAD),
       .y = h/2 - CELL_HEIGHT/2,
       .width = CELL_WIDTH,
       .height = CELL_HEIGHT,
     };
     DrawRectangleRec(rec, cell_color);
 
-    const char *text = "0";
-    Vector2 text_size = MeasureTextEx(p->font, text, FONT_SIZE, 0);
-    Vector2 position = { .x = rec.x, .y = rec.y };
-    position = Vector2Add(position, Vector2Scale(cell_size, 0.5));
-    position = Vector2Subtract(position, Vector2Scale(text_size, 0.5));
-    DrawTextEx(p->font, text, position, FONT_SIZE, 0, background_color);
+    {
+      const char *text = p->tape[i].from;
+      float q = (1 - p->tape[i].t);
+      float font_size = FONT_SIZE*q;
+      Vector2 text_size = MeasureTextEx(p->font, text, font_size, 0);
+      Vector2 position = { .x = rec.x, .y = rec.y };
+      position = Vector2Add(position, Vector2Scale(cell_size, 0.5));
+      position = Vector2Subtract(position, Vector2Scale(text_size, 0.5));
+      DrawTextEx(p->font, text, position, font_size, 0, ColorAlpha(background_color, q));
+    }
+
+    {
+      const char *text = p->tape[i].to;
+      float q = p->tape[i].t;
+      float font_size = FONT_SIZE*q;
+      Vector2 text_size = MeasureTextEx(p->font, text, font_size, 0);
+      Vector2 position = { .x = rec.x, .y = rec.y };
+      position = Vector2Add(position, Vector2Scale(cell_size, 0.5));
+      position = Vector2Subtract(position, Vector2Scale(text_size, 0.5));
+      DrawTextEx(p->font, text, position, font_size, 0, ColorAlpha(background_color, q));
+    }
   }
 
   float head_thick = 20.0;
@@ -172,21 +205,21 @@ void plug_update(void)
 {
   BeginDrawing();
   if (p->ffmpeg != NULL) {
-    if (p->rendering_duration >= keyframes_duration(kfs, kfs_count)) {
+    if (p->head.state >= HS_HALT) {
       ffmpeg_end_rendering(p->ffmpeg);
-      memset(&p->a, 0, sizeof(p->a));
+      reset_animation();
       p->ffmpeg = NULL;
       SetTraceLogLevel(LOG_INFO);
     } else {
       BeginTextureMode(p->screen);
-      turing_machine_tape(&p->a, RENDER_DELTA_TIME, RENDER_WIDTH, RENDER_HEIGHT);
+      turing_machine(RENDER_DELTA_TIME, RENDER_WIDTH, RENDER_HEIGHT);
       p->rendering_duration += RENDER_DELTA_TIME;
       EndTextureMode();
 
       Image image = LoadImageFromTexture(p->screen.texture);
       if (!ffmpeg_send_frame_flipped(p->ffmpeg, image.data, image.width, image.height)) {
         ffmpeg_end_rendering(p->ffmpeg);
-        memset(&p->a, 0, sizeof(p->a));
+        reset_animation();
         p->ffmpeg = NULL;
         SetTraceLogLevel(LOG_INFO);
       }
@@ -197,9 +230,9 @@ void plug_update(void)
       SetTraceLogLevel(LOG_WARNING);
       p->ffmpeg = ffmpeg_start_rendering(RENDER_WIDTH, RENDER_HEIGHT, RENDER_FPS);
       p->rendering_duration = 0.0;
-      memset(&p->a, 0, sizeof(p->a));
+      reset_animation();
     }
-    turing_machine_tape(&p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
+    turing_machine(GetFrameTime(), GetScreenWidth(), GetScreenHeight());
   }
   EndDrawing();
 }
