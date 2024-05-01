@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -pedantic
+CFLAGS=-Wall -Wextra
 LIBS=-lraylib
 
 OUT_LIBPLUG=build/libplug.so

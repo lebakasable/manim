@@ -24,25 +24,25 @@ bool reload_libplug(void)
     return false;
   }
 
-  *(void **)(&plug_init) = dlsym(libplug, "plug_init");
+  plug_init = dlsym(libplug, "plug_init");
   if (plug_init == NULL) {
     fprintf(stderr, "ERROR: %s\n", dlerror());
     return false;
   }
 
-  *(void **)(&plug_pre_reload) = dlsym(libplug, "plug_pre_reload");
+  plug_pre_reload = dlsym(libplug, "plug_pre_reload");
   if (plug_pre_reload == NULL) {
     fprintf(stderr, "ERROR: %s\n", dlerror());
     return false;
   }
 
-  *(void **)(&plug_post_reload) = dlsym(libplug, "plug_post_reload");
+  plug_post_reload = dlsym(libplug, "plug_post_reload");
   if (plug_post_reload == NULL) {
     fprintf(stderr, "ERROR: %s\n", dlerror());
     return false;
   }
 
-  *(void **)(&plug_update) = dlsym(libplug, "plug_update");
+  plug_update = dlsym(libplug, "plug_update");
   if (plug_update == NULL) {
     fprintf(stderr, "ERROR: %s\n", dlerror());
     return false;
