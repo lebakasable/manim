@@ -30,16 +30,15 @@ typedef struct {
   float duration;
 } Keyframe;
 
-float animation_value(Animation a, Keyframe *kfs, size_t kfs_count)
+float animation_value(Animation *a, Keyframe *kfs, size_t kfs_count)
 {
   assert(kfs_count > 0);
-  if (a.i >= kfs_count) {
+  if (a->i >= kfs_count) {
     return kfs[kfs_count - 1].to;
   }
 
-  Keyframe *kf = &kfs[a.i];
-
-  return Lerp(kf->from, kf->to, a.duration/kf->duration);
+  Keyframe *kf = &kfs[a->i];
+  return Lerp(kf->from, kf->to, a->duration/kf->duration);
 }
 
 void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
@@ -102,7 +101,7 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
-void turing_machine_tape(Animation a, float dt, float w, float h)
+void turing_machine_tape(Animation *a, float dt, float w, float h)
 {
   size_t offset = 7;
   Keyframe kfs[] = {
@@ -112,8 +111,8 @@ void turing_machine_tape(Animation a, float dt, float w, float h)
     {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
     {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
     {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    //{.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    //{.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
   };
 
   Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
@@ -127,7 +126,7 @@ void turing_machine_tape(Animation a, float dt, float w, float h)
   Color background_color = COLOR_TEXT;
 #endif
 
-  animation_update(&a, dt, kfs, ARRAY_LEN(kfs));
+  animation_update(a, dt, kfs, ARRAY_LEN(kfs));
   float t = animation_value(a, kfs, ARRAY_LEN(kfs));
 
   ClearBackground(background_color);
@@ -161,6 +160,6 @@ void turing_machine_tape(Animation a, float dt, float w, float h)
 void plug_update(void)
 {
   BeginDrawing();
-  turing_machine_tape(p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
+  turing_machine_tape(&p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
   EndDrawing();
 }
