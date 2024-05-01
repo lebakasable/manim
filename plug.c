@@ -121,7 +121,7 @@ void plug_update(void)
     //{.from = w/2 - rw/2 - (offset + 3)*(rw + pad), .to = w/2 - rw/2 - (offset + 0)*(rw + pad), .duration = 0.5},
   };
 
-#if 1
+#if DARK_MODE
   Color cell_color = COLOR_TEXT;
   Color head_color = COLOR_BLUE;
   Color background_color = COLOR_BASE;
