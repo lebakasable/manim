@@ -121,9 +121,13 @@ static Keyframe kfs[] = {
   {.from = 2, .to = 2, .duration = 0.5},
   {.from = 2, .to = 3, .duration = 0.5},
 };
+#define kfs_count ARRAY_LEN(kfs)
 
 void turing_machine_tape(Animation *a, float dt, float w, float h)
 {
+  animation_update(a, dt, kfs, kfs_count);
+  float t = animation_value(a, kfs, kfs_count);
+
   Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
 #if DARK_MODE
   Color cell_color = COLOR_TEXT;
@@ -134,9 +138,6 @@ void turing_machine_tape(Animation *a, float dt, float w, float h)
   Color head_color = COLOR_BLUE;
   Color background_color = COLOR_TEXT;
 #endif
-
-  animation_update(a, dt, kfs, ARRAY_LEN(kfs));
-  float t = animation_value(a, kfs, ARRAY_LEN(kfs));
 
   ClearBackground(background_color);
   for (size_t i = 0; i < 200; ++i) {
@@ -171,7 +172,7 @@ void plug_update(void)
 {
   BeginDrawing();
   if (p->ffmpeg != NULL) {
-    if (p->rendering_duration >= keyframes_duration(kfs, ARRAY_LEN(kfs))) {
+    if (p->rendering_duration >= keyframes_duration(kfs, kfs_count)) {
       ffmpeg_end_rendering(p->ffmpeg);
       memset(&p->a, 0, sizeof(p->a));
       p->ffmpeg = NULL;
