@@ -68,6 +68,16 @@ typedef struct {
 
 static Plug *p = NULL;
 
+void load_resources()
+{
+  p->font = LoadFontEx("fonts/ttf/JetBrainsMono-Regular.ttf", FONT_SIZE, 0, 250);
+}
+
+void unload_resources()
+{
+  UnloadFont(p->font);
+}
+
 void plug_init(void)
 {
   TraceLog(LOG_INFO, "Initializing plugin");
@@ -75,17 +85,19 @@ void plug_init(void)
   assert(p != NULL);
   memset(p, 0, sizeof(*p));
   p->a.loop = true;
-  p->font = LoadFontEx("fonts/ttf/JetBrainsMono-Regular.ttf", FONT_SIZE, 0, 250);
+  load_resources();
 }
 
 void *plug_pre_reload(void)
 {
+  unload_resources();
   return p;
 }
 
 void plug_post_reload(void *state)
 {
   p = state;
+  load_resources();
 }
 
 void plug_update(void)
