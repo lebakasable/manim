@@ -42,7 +42,7 @@ float animation_value(Animation a, Keyframe *kfs, size_t kfs_count)
   return Lerp(kf->from, kf->to, a.duration/kf->duration);
 }
 
-void animation_update(Animation *a, Keyframe *kfs, size_t kfs_count)
+void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
 {
   assert(kfs_count > 0);
 
@@ -55,7 +55,6 @@ void animation_update(Animation *a, Keyframe *kfs, size_t kfs_count)
     }
   }
 
-  float dt = GetFrameTime();
   a->duration += dt;
 
   while (a->i < kfs_count && a->duration >= kfs[a->i].duration) {
@@ -103,7 +102,7 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
-void turing_machine_tape(Animation a, float w, float h)
+void turing_machine_tape(Animation a, float dt, float w, float h)
 {
   size_t offset = 7;
   Keyframe kfs[] = {
@@ -128,7 +127,7 @@ void turing_machine_tape(Animation a, float w, float h)
   Color background_color = COLOR_TEXT;
 #endif
 
-  animation_update(&p->a, kfs, ARRAY_LEN(kfs));
+  animation_update(&a, dt, kfs, ARRAY_LEN(kfs));
   float t = animation_value(a, kfs, ARRAY_LEN(kfs));
 
   ClearBackground(background_color);
@@ -161,10 +160,7 @@ void turing_machine_tape(Animation a, float w, float h)
 
 void plug_update(void)
 {
-  float w = GetScreenWidth();
-  float h = GetScreenHeight();
-
   BeginDrawing();
-  turing_machine_tape(p->a, w, h);
+  turing_machine_tape(p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
   EndDrawing();
 }
