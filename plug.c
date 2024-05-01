@@ -103,9 +103,19 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
-void turing_machine_tape(Animation a, Keyframe *kfs, size_t kfs_count, float w, float h)
+void turing_machine_tape(Animation a, float w, float h)
 {
-  float t = animation_value(a, kfs, kfs_count);
+  size_t offset = 7;
+  Keyframe kfs[] = {
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+  };
 
   Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
 #if DARK_MODE
@@ -117,6 +127,9 @@ void turing_machine_tape(Animation a, Keyframe *kfs, size_t kfs_count, float w, 
   Color head_color = COLOR_BLUE;
   Color background_color = COLOR_TEXT;
 #endif
+
+  animation_update(&p->a, kfs, ARRAY_LEN(kfs));
+  float t = animation_value(a, kfs, ARRAY_LEN(kfs));
 
   ClearBackground(background_color);
   for (size_t i = 0; i < 200; ++i) {
@@ -151,20 +164,7 @@ void plug_update(void)
   float w = GetScreenWidth();
   float h = GetScreenHeight();
 
-  size_t offset = 7;
-  Keyframe kfs[] = {
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
-  };
-
   BeginDrawing();
-  animation_update(&p->a, kfs, ARRAY_LEN(kfs));
-  turing_machine_tape(p->a, kfs, ARRAY_LEN(kfs), w, h);
+  turing_machine_tape(p->a, w, h);
   EndDrawing();
 }
