@@ -99,9 +99,6 @@ void plug_post_reload(void *state)
     TraceLog(LOG_INFO, "Migrating plugin state scheme %zu bytes -> %zu bytes", p->size, sizeof(*p));
     p = realloc(p, sizeof(*p));
     p->size = sizeof(*p);
-  } else if (p->size > sizeof(*p)) {
-    TraceLog(LOG_ERROR, "Cannot migrate the new plugin state schema because the size of the state became smaller");
-    abort();
   }
 
   load_resources();
