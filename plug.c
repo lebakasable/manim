@@ -6,17 +6,17 @@
 #include <raylib.h>
 #include <raymath.h>
 #include "common.h"
+#include "ffmpeg.h"
+
+#define RENDER_WIDTH 900
+#define RENDER_HEIGHT 450
+#define RENDER_FPS 60
+#define RENDER_DELTA_TIME (1.0/RENDER_FPS)
 
 #define FONT_SIZE 52
 #define CELL_WIDTH 100
 #define CELL_HEIGHT 100
 #define CELL_PAD (CELL_WIDTH*0.15)
-
-#define COLOR_BASE   GetColor(0x1e1e2eff)
-#define COLOR_RED    GetColor(0xf38ba8ff)
-#define COLOR_YELLOW GetColor(0xf9e2afff)
-#define COLOR_BLUE   GetColor(0x89b4faff)
-#define COLOR_TEXT   GetColor(0xcdd6f4ff)
 
 typedef struct {
   size_t i;
@@ -29,37 +29,45 @@ typedef struct {
   float duration;
 } Keyframe;
 
+float keyframes_duration(Keyframe *kfs, size_t kfs_count)
+{
+  float duration = 0.0;
+  for (size_t i = 0; i < kfs_count; ++i) {
+    duration += kfs[i].duration;
+  }
+  return duration;
+}
+
 float animation_value(Animation *a, Keyframe *kfs, size_t kfs_count)
 {
   assert(kfs_count > 0);
-  if (a->i >= kfs_count) {
-    return kfs[kfs_count - 1].to;
-  }
-
   Keyframe *kf = &kfs[a->i];
-  return Lerp(kf->from, kf->to, a->duration/kf->duration);
+  float t = a->duration/kf->duration;
+  t = (sinf(PI*t - PI*0.5) + 1)*0.5;
+  return Lerp(kf->from, kf->to, t);
 }
 
 void animation_update(Animation *a, float dt, Keyframe *kfs, size_t kfs_count)
 {
   assert(kfs_count > 0);
 
-  if (a->i >= kfs_count) {
-    a->i = 0;
-    a->duration = 0;
-  }
-
+  a->i = a->i%kfs_count;
   a->duration += dt;
 
-  while (a->i < kfs_count && a->duration >= kfs[a->i].duration) {
+  while (a->duration >= kfs[a->i].duration) {
     a->duration -= kfs[a->i].duration;
-    a->i += 1;
+    a->i = (a->i + 1)%kfs_count;
   }
 }
 
 typedef struct {
   size_t size;
+
   Animation a;
+  FFMPEG *ffmpeg;
+  RenderTexture2D screen;
+  float rendering_duration;
+
   Font font;
 } Plug;
 
@@ -82,6 +90,7 @@ void plug_init(void)
   assert(p != NULL);
   memset(p, 0, sizeof(*p));
   p->size = sizeof(*p);
+  p->screen = LoadRenderTexture(RENDER_WIDTH, RENDER_HEIGHT);
   load_resources();
 }
 
@@ -106,7 +115,7 @@ void plug_post_reload(void *state)
 
 void turing_machine_tape(Animation *a, float dt, float w, float h)
 {
-  size_t offset = 7;
+  float offset = 7.0;
   Keyframe kfs[] = {
     {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
     {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
@@ -163,6 +172,35 @@ void turing_machine_tape(Animation *a, float dt, float w, float h)
 void plug_update(void)
 {
   BeginDrawing();
-  turing_machine_tape(&p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
+  if (p->ffmpeg != NULL) {
+    if (p->rendering_duration >= 3) {
+      ffmpeg_end_rendering(p->ffmpeg);
+      memset(&p->a, 0, sizeof(p->a));
+      p->ffmpeg = NULL;
+      SetTraceLogLevel(LOG_INFO);
+    } else {
+      BeginTextureMode(p->screen);
+      turing_machine_tape(&p->a, RENDER_DELTA_TIME, RENDER_WIDTH, RENDER_HEIGHT);
+      p->rendering_duration += RENDER_DELTA_TIME;
+      EndTextureMode();
+
+      Image image = LoadImageFromTexture(p->screen.texture);
+      if (!ffmpeg_send_frame_flipped(p->ffmpeg, image.data, image.width, image.height)) {
+        ffmpeg_end_rendering(p->ffmpeg);
+        memset(&p->a, 0, sizeof(p->a));
+        p->ffmpeg = NULL;
+        SetTraceLogLevel(LOG_INFO);
+      }
+      UnloadImage(image);
+    }
+  } else {
+    if (IsKeyPressed(KEY_R)) {
+      SetTraceLogLevel(LOG_WARNING);
+      p->ffmpeg = ffmpeg_start_rendering(RENDER_WIDTH, RENDER_HEIGHT, RENDER_FPS);
+      p->rendering_duration = 0.0;
+      memset(&p->a, 0, sizeof(p->a));
+    }
+    turing_machine_tape(&p->a, GetFrameTime(), GetScreenWidth(), GetScreenHeight());
+  }
   EndDrawing();
 }
