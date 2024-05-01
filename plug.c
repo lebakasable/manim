@@ -8,6 +8,9 @@
 #include "common.h"
 
 #define FONT_SIZE 52
+#define CELL_WIDTH 100
+#define CELL_HEIGHT 100
+#define CELL_PAD (CELL_WIDTH*0.15)
 
 #define COLOR_BASE   GetColor(0x1e1e2eff)
 #define COLOR_RED    GetColor(0xf38ba8ff)
@@ -100,27 +103,11 @@ void plug_post_reload(void *state)
   load_resources();
 }
 
-void plug_update(void)
+void turing_machine_tape(Animation a, Keyframe *kfs, size_t kfs_count, float w, float h)
 {
-  float rw = 100.0;
-  float rh = 100.0;
-  Vector2 cell_size = {rw, rh};
-  float pad = rw*0.15;
-  float w = GetScreenWidth();
-  float h = GetScreenHeight();
+  float t = animation_value(a, kfs, kfs_count);
 
-  size_t offset = 7;
-  Keyframe kfs[] = {
-    {.from = w/2 - rw/2 - (offset + 0)*(rw + pad), .to = w/2 - rw/2 - (offset + 0)*(rw + pad), .duration = 0.5},
-    {.from = w/2 - rw/2 - (offset + 0)*(rw + pad), .to = w/2 - rw/2 - (offset + 1)*(rw + pad), .duration = 0.5},
-    {.from = w/2 - rw/2 - (offset + 1)*(rw + pad), .to = w/2 - rw/2 - (offset + 1)*(rw + pad), .duration = 0.5},
-    {.from = w/2 - rw/2 - (offset + 1)*(rw + pad), .to = w/2 - rw/2 - (offset + 2)*(rw + pad), .duration = 0.5},
-    {.from = w/2 - rw/2 - (offset + 2)*(rw + pad), .to = w/2 - rw/2 - (offset + 2)*(rw + pad), .duration = 0.5},
-    {.from = w/2 - rw/2 - (offset + 2)*(rw + pad), .to = w/2 - rw/2 - (offset + 3)*(rw + pad), .duration = 0.5},
-    //{.from = w/2 - rw/2 - (offset + 3)*(rw + pad), .to = w/2 - rw/2 - (offset + 3)*(rw + pad), .duration = 0.5},
-    //{.from = w/2 - rw/2 - (offset + 3)*(rw + pad), .to = w/2 - rw/2 - (offset + 0)*(rw + pad), .duration = 0.5},
-  };
-
+  Vector2 cell_size = {CELL_WIDTH, CELL_HEIGHT};
 #if DARK_MODE
   Color cell_color = COLOR_TEXT;
   Color head_color = COLOR_BLUE;
@@ -131,16 +118,13 @@ void plug_update(void)
   Color background_color = COLOR_TEXT;
 #endif
 
-  BeginDrawing();
-  animation_update(&p->a, kfs, ARRAY_LEN(kfs));
-  float t = animation_value(p->a, kfs, ARRAY_LEN(kfs));
   ClearBackground(background_color);
   for (size_t i = 0; i < 200; ++i) {
     Rectangle rec = {
-      .x = i*(rw + pad) + t,
-      .y = h/2 - rh/2,
-      .width = rw,
-      .height = rh,
+      .x = i*(CELL_WIDTH + CELL_PAD) + t,
+      .y = h/2 - CELL_HEIGHT/2,
+      .width = CELL_WIDTH,
+      .height = CELL_HEIGHT,
     };
     DrawRectangleRec(rec, cell_color);
 
@@ -154,12 +138,33 @@ void plug_update(void)
 
   float head_thick = 20.0;
   Rectangle rec = {
-    .width = rw + head_thick*3,
-    .height = rh + head_thick*3,
+    .width = CELL_WIDTH + head_thick*3,
+    .height = CELL_HEIGHT + head_thick*3,
   };
   rec.x = w/2 - rec.width/2;
   rec.y = h/2 - rec.height/2;
   DrawRectangleLinesEx(rec, head_thick, head_color);
+}
 
+void plug_update(void)
+{
+  float w = GetScreenWidth();
+  float h = GetScreenHeight();
+
+  size_t offset = 7;
+  Keyframe kfs[] = {
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 1)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 2)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+    {.from = w/2 - CELL_WIDTH/2 - (offset + 3)*(CELL_WIDTH + CELL_PAD), .to = w/2 - CELL_WIDTH/2 - (offset + 0)*(CELL_WIDTH + CELL_PAD), .duration = 0.5},
+  };
+
+  BeginDrawing();
+  animation_update(&p->a, kfs, ARRAY_LEN(kfs));
+  turing_machine_tape(p->a, kfs, ARRAY_LEN(kfs), w, h);
   EndDrawing();
 }
